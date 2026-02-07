@@ -1,0 +1,27 @@
+package view
+
+templ Layout(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } - Monitoring Dashboard</title>
+			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+			<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+			<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+			<link rel="stylesheet" href="/static/css/style.css"/>
+		</head>
+		<body>
+			<nav class="navbar">
+				<div class="container">
+					<h1>System Monitoring Dashboard</h1>
+				</div>
+			</nav>
+			<main class="container">
+				{ children... }
+			</main>
+			<script src="/static/js/websocket.js"></script>
+		</body>
+	</html>
+}

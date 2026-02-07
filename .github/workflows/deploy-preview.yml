@@ -1,0 +1,105 @@
+name: Deploy PR Preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  EKS_CLUSTER_NAME: ${{ vars.STAGING_EKS_CLUSTER_NAME }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  PREVIEW_BASE_DOMAIN: ${{ vars.PREVIEW_BASE_DOMAIN }}
+
+jobs:
+  deploy-preview:
+    if: github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.4
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          IMAGE_TAG: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
+        run: |
+          IMAGE_REPO="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}"
+          docker build -f monitoring-dashboard-api/Dockerfile -t "${IMAGE_REPO}:${IMAGE_TAG}" monitoring-dashboard-api
+          docker push "${IMAGE_REPO}:${IMAGE_TAG}"
+          echo "IMAGE_REPO=${IMAGE_REPO}" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      - name: Configure kubeconfig
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+
+      - name: Prepare preview namespace
+        env:
+          NAMESPACE: pr-${{ github.event.pull_request.number }}
+        run: ./infra/scripts/prepare_preview_namespace.sh "$NAMESPACE"
+
+      - name: Deploy preview release
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          NAMESPACE="pr-${PR_NUMBER}"
+          RELEASE="monitoring-dashboard-pr-${PR_NUMBER}"
+          HOST="pr-${PR_NUMBER}.${PREVIEW_BASE_DOMAIN}"
+
+          helm upgrade --install "$RELEASE" ./infra/helm/monitoring-dashboard \
+            --namespace "$NAMESPACE" \
+            -f ./infra/helm/monitoring-dashboard/values.yaml \
+            -f ./infra/helm/monitoring-dashboard/values-staging.yaml \
+            -f ./infra/helm/monitoring-dashboard/values-preview.yaml \
+            --set fullnameOverride="$RELEASE" \
+            --set image.repository="$IMAGE_REPO" \
+            --set image.tag="$IMAGE_TAG" \
+            --set ingress.hosts[0].host="$HOST" \
+            --set config.ALLOWED_ORIGINS="https://$HOST" \
+            --set externalSecrets.targetSecretName="${RELEASE}-secrets" \
+            --set secretRef.name="${RELEASE}-secrets" \
+            --wait --timeout 10m
+
+          echo "PREVIEW_URL=https://${HOST}" >> "$GITHUB_ENV"
+
+      - name: Publish preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `Preview environment is ready: ${process.env.PREVIEW_URL}`;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

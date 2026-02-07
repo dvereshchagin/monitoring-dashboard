@@ -1,0 +1,13 @@
+name: Legacy CI-CD (Manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  notice:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Legacy pipeline notice
+        run: |
+          echo "This legacy docker-compose pipeline is disabled by default."
+          echo "Use ci-pr.yml, deploy-preview.yml, deploy-staging.yml, and deploy-prod.yml workflows."

@@ -1,0 +1,50 @@
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+config:
+  METRICS_RETENTION_DAYS: "3"
+  LOG_LEVEL: "debug"
+
+externalSecrets:
+  data:
+    - secretKey: DB_HOST
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: DB_HOST
+    - secretKey: DB_PORT
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: DB_PORT
+    - secretKey: DB_USER
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: DB_USER
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: DB_PASSWORD
+    - secretKey: DB_NAME
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: DB_NAME
+    - secretKey: AUTH_BEARER_TOKEN
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: AUTH_BEARER_TOKEN
+
+ingress:
+  annotations:
+    alb.ingress.kubernetes.io/group.name: monitoring-dashboard-preview

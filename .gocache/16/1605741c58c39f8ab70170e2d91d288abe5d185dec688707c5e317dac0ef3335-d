@@ -1,0 +1,5 @@
+./auth_api_handler.go
+./dashboard_handler.go
+./metrics_api_handler.go
+./screenshot_api_handler.go
+./websocket_handler.go

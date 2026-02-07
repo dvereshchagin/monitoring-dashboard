@@ -1,0 +1,11 @@
+.git
+.github
+.gocache
+.golangci-cache
+.gomodcache
+bin
+dist
+browser-tools-mcp
+node_modules
+**/*.log
+**/.DS_Store

@@ -1,0 +1,52 @@
+package view
+
+import "github.com/dreschagin/monitoring-dashboard/internal/application/dto"
+import "fmt"
+
+templ Dashboard(snapshot *dto.MetricSnapshotDTO) {
+	@Layout("Dashboard") {
+		<div class="metrics-grid">
+			if snapshot.CPU != nil {
+				@MetricCard("CPU Usage", snapshot.CPU.Value, snapshot.CPU.Unit, "cpu", snapshot.CPU.IsCritical, snapshot.CPU.IsWarning)
+			}
+			if snapshot.Memory != nil {
+				@MetricCard("Memory Usage", snapshot.Memory.Value, snapshot.Memory.Unit, "memory", snapshot.Memory.IsCritical, snapshot.Memory.IsWarning)
+			}
+			if snapshot.Disk != nil {
+				@MetricCard("Disk Usage", snapshot.Disk.Value, snapshot.Disk.Unit, "disk", snapshot.Disk.IsCritical, snapshot.Disk.IsWarning)
+			}
+			if snapshot.Network != nil {
+				@MetricCard("Network Sent", snapshot.Network.Value, snapshot.Network.Unit, "network", snapshot.Network.IsCritical, snapshot.Network.IsWarning)
+			}
+		</div>
+		<div class="status-indicator">
+			<span id="connection-status" class="status connected">● Connected</span>
+			<span id="client-count">Clients: <span id="client-count-value">-</span></span>
+		</div>
+		<div class="charts-container">
+			<div class="chart-wrapper">
+				<h3>CPU History (1 Hour)</h3>
+				<canvas id="cpuChart"></canvas>
+			</div>
+			<div class="chart-wrapper">
+				<h3>Memory History (1 Hour)</h3>
+				<canvas id="memoryChart"></canvas>
+			</div>
+		</div>
+	}
+}
+
+templ MetricCard(name string, value float64, unit string, id string, isCritical bool, isWarning bool) {
+	<div class={ "metric-card", templ.KV("critical", isCritical), templ.KV("warning", isWarning && !isCritical) } id={ id + "-card" }>
+		<h3>{ name }</h3>
+		<div class="metric-value">
+			<span class="value" id={ id + "-value" }>{ fmt.Sprintf("%.1f", value) }</span>
+			<span class="unit">{ unit }</span>
+		</div>
+		if isCritical {
+			<div class="status-badge critical">Critical</div>
+		} else if isWarning {
+			<div class="status-badge warning">Warning</div>
+		}
+	</div>
+}

@@ -1,0 +1,73 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "ECR image tag to deploy (example: git SHA from staging)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  EKS_CLUSTER_NAME: ${{ vars.PROD_EKS_CLUSTER_NAME }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  PROD_HOST: ${{ vars.PROD_HOST }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.4
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Configure kubeconfig
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+
+      - name: Deploy production release
+        env:
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+        run: |
+          NAMESPACE="monitoring-dashboard-prod"
+          RELEASE="monitoring-dashboard-prod"
+          IMAGE_REPO="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}"
+
+          kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+          helm upgrade --install "$RELEASE" ./infra/helm/monitoring-dashboard \
+            --namespace "$NAMESPACE" \
+            -f ./infra/helm/monitoring-dashboard/values.yaml \
+            -f ./infra/helm/monitoring-dashboard/values-prod.yaml \
+            --set image.repository="$IMAGE_REPO" \
+            --set image.tag="$IMAGE_TAG" \
+            --set ingress.hosts[0].host="$PROD_HOST" \
+            --set config.ALLOWED_ORIGINS="https://$PROD_HOST" \
+            --set externalSecrets.targetSecretName="monitoring-dashboard-prod-secrets" \
+            --set secretRef.name="monitoring-dashboard-prod-secrets" \
+            --wait --timeout 10m

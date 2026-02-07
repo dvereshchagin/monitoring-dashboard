@@ -1,0 +1,30 @@
+aws_region         = "eu-north-1"
+project_name       = "monitoring-dashboard"
+environment        = "staging"
+
+vpc_cidr            = "10.20.0.0/16"
+availability_zones  = ["eu-north-1a", "eu-north-1b"]
+public_subnet_cidrs = ["10.20.1.0/24", "10.20.2.0/24"]
+private_subnet_cidrs = ["10.20.11.0/24", "10.20.12.0/24"]
+
+cluster_version      = "1.30"
+node_instance_types  = ["t3.medium"]
+node_desired_size    = 2
+node_min_size        = 2
+node_max_size        = 4
+
+db_name                     = "monitoring"
+db_username                 = "monitoring_app"
+db_password                 = "CHANGE_ME"
+db_instance_class           = "db.t4g.medium"
+db_allocated_storage        = 50
+db_max_allocated_storage    = 200
+db_multi_az                 = true
+db_backup_retention_days    = 7
+db_deletion_protection      = true
+
+ecr_repository_name = "monitoring-dashboard-api"
+
+tags = {
+  Owner = "platform-team"
+}

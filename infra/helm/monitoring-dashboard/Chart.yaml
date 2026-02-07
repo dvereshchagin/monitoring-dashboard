@@ -1,0 +1,6 @@
+apiVersion: v2
+name: monitoring-dashboard
+description: Monitoring dashboard API deployment chart
+version: 0.1.0
+appVersion: "1.0.0"
+type: application

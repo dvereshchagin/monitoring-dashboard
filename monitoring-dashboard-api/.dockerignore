@@ -1,0 +1,9 @@
+.git
+.github
+.gocache
+bin
+dist
+browser-tools-mcp
+node_modules
+**/*.log
+**/.DS_Store

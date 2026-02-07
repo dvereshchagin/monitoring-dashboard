@@ -1,0 +1,7 @@
+aws_region        = "eu-north-1"
+state_bucket_name = "monitoring-dashboard-terraform-state"
+lock_table_name   = "monitoring-dashboard-terraform-locks"
+
+tags = {
+  Project = "monitoring-dashboard"
+}

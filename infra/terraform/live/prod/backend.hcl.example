@@ -1,0 +1,5 @@
+bucket         = "monitoring-dashboard-terraform-state"
+key            = "prod/terraform.tfstate"
+region         = "eu-north-1"
+dynamodb_table = "monitoring-dashboard-terraform-locks"
+encrypt        = true

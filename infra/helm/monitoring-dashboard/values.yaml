@@ -1,0 +1,113 @@
+replicaCount: 2
+
+image:
+  repository: ""
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+  hosts:
+    - host: staging.xyibank.ru
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+config:
+  SERVER_PORT: "8080"
+  METRICS_COLLECTION_INTERVAL: "2s"
+  METRICS_RETENTION_DAYS: "7"
+  LOG_LEVEL: "info"
+  ALLOWED_ORIGINS: "https://staging.xyibank.ru"
+  AUTH_ENABLED: "true"
+  S3_ENABLED: "false"
+  S3_REGION: "eu-north-1"
+  S3_ENDPOINT: ""
+  S3_USE_PATH_STYLE: "false"
+  S3_KEY_PREFIX: "dashboards"
+  S3_URL_MODE: "presigned"
+  S3_PRESIGNED_TTL: "5m"
+  SCREENSHOT_MAX_PAYLOAD_MB: "20"
+  SCREENSHOT_MAX_ARTIFACT_MB: "5"
+  SCREENSHOT_RATE_LIMIT_PER_MINUTE: "30"
+
+secretRef:
+  name: monitoring-dashboard-app-secrets
+
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secretsmanager
+    kind: ClusterSecretStore
+  targetSecretName: monitoring-dashboard-app-secrets
+  data:
+    - secretKey: DB_HOST
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: DB_HOST
+    - secretKey: DB_PORT
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: DB_PORT
+    - secretKey: DB_USER
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: DB_USER
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: DB_PASSWORD
+    - secretKey: DB_NAME
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: DB_NAME
+    - secretKey: AUTH_BEARER_TOKEN
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: AUTH_BEARER_TOKEN
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

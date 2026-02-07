@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16
+    container_name: monitoring-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ${IMAGE}
+    container_name: monitoring-dashboard
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      SERVER_PORT: "8080"
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      METRICS_COLLECTION_INTERVAL: ${METRICS_COLLECTION_INTERVAL:-2s}
+      METRICS_RETENTION_DAYS: ${METRICS_RETENTION_DAYS:-7}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      AUTH_BEARER_TOKEN: ${AUTH_BEARER_TOKEN}
+      S3_ENABLED: ${S3_ENABLED:-false}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-ru-central1}
+      S3_ENDPOINT: ${S3_ENDPOINT:-https://storage.yandexcloud.net}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE:-true}
+      S3_KEY_PREFIX: ${S3_KEY_PREFIX:-dashboards}
+      S3_URL_MODE: ${S3_URL_MODE:-presigned}
+      S3_PRESIGNED_TTL: ${S3_PRESIGNED_TTL:-5m}
+
+volumes:
+  pgdata:
