@@ -2,6 +2,14 @@
 
 Real-time system monitoring dashboard built with **Go**, **WebSocket**, **HTMX**, and **Templ** using **DDD** and **Clean Architecture** principles.
 
+## Preview Environments
+
+Each pull request automatically deploys a **preview environment** on AWS EKS with ArgoCD:
+- **URL Pattern**: `feature-{branch-name}.preview.xyibank.ru`
+- **Auto-sync**: Helm values updated via GitOps
+- **Load Balancer**: AWS ALB with external-dns
+- **Isolated**: Separate namespace per preview
+
 ## Features
 
 - ✅ **Real-time metrics** - CPU, Memory, Disk, Network usage updated every 2 seconds via WebSocket
