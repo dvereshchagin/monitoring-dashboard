@@ -30,13 +30,13 @@ releaseAnalyzer:
   interval: 20s
   image:
     repository: 729665432048.dkr.ecr.eu-north-1.amazonaws.com/monitoring-dashboard
-    tag: staging-20260208133652
+    tag: staging-20260208143142
 gateway:
   enabled: true
   replicaCount: 2
   image:
     repository: 729665432048.dkr.ecr.eu-north-1.amazonaws.com/monitoring-dashboard
-    tag: staging-20260208133652
+    tag: staging-20260208143142
   ha:
     enabled: true
   podDisruptionBudget:
