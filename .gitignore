@@ -43,3 +43,26 @@ Thumbs.db
 *.tfstate.*
 *.tfvars
 backend.hcl
+*.tfplan
+
+# Go build cache
+.gocache/
+.gomodcache/
+
+# Deployment scripts
+DEPLOY_COMMANDS.sh
+
+# Temporary documentation
+IMPLEMENTATION_CHECKLIST.md
+NATS_IMPLEMENTATION_SUMMARY.md
+
+# Local binaries
+monitoring-dashboard-api/monitoring-dashboard-api
+monitoring-dashboard-api/release-analyzer
+
+# Test results
+monitoring-dashboard-api/results/
+
+# Temporary config
+.golangci.yml
+infra/terraform/aws-config
