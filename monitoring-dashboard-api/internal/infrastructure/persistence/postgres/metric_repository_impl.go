@@ -146,23 +146,30 @@ func (r *PostgresMetricRepository) FindByType(
 	return r.scanMetrics(rows)
 }
 
-// FindByTimeRange находит метрики по типу и временному диапазону
+// FindByTimeRange находит метрики по типу и временному диапазону с лимитом
+// Добавлен LIMIT для предотвращения больших выборок и улучшения производительности
 func (r *PostgresMetricRepository) FindByTimeRange(
 	ctx context.Context,
 	metricType valueobject.MetricType,
 	timeRange valueobject.TimeRange,
 ) ([]*entity.Metric, error) {
+	// Максимум 5000 записей для защиты от больших выборок
+	// При интервале сбора 2 секунды это ~2.7 часа данных
+	const maxRecords = 5000
+
 	query := `
 		SELECT id, metric_type, metric_name, value, unit, metadata, collected_at, created_at
 		FROM metrics
 		WHERE metric_type = $1 AND collected_at BETWEEN $2 AND $3
 		ORDER BY collected_at DESC
+		LIMIT $4
 	`
 
 	rows, err := r.db.QueryContext(ctx, query,
 		metricType.String(),
 		timeRange.Start(),
 		timeRange.End(),
+		maxRecords,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query metrics: %w", err)
