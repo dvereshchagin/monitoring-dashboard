@@ -14,7 +14,7 @@ RUN go install github.com/a-h/templ/cmd/templ@v0.3.977
 RUN templ generate
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /out/monitoring-dashboard cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /out/monitoring-dashboard cmd/monitoring-dashboard-api/main.go
 
 FROM gcr.io/distroless/base-debian12
 
