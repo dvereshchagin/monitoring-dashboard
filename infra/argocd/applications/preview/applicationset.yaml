@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: preview-environments
+  namespace: argocd
+spec:
+  generators:
+    - pullRequest:
+        github:
+          owner: davereschagin
+          repo: monitoring-dashboard
+          tokenRef:
+            secretName: github-token
+            key: token
+        requeueAfterSeconds: 60
+  template:
+    metadata:
+      name: 'monitoring-dashboard-pr-{{number}}'
+      labels:
+        environment: preview
+        pr-number: '{{number}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/davereschagin/monitoring-dashboard.git
+        targetRevision: '{{head_sha}}'
+        path: infra/helm/monitoring-dashboard
+        helm:
+          valueFiles:
+            - values.yaml
+            - values-staging.yaml
+            - values-preview.yaml
+          parameters:
+            - name: fullnameOverride
+              value: 'monitoring-dashboard-pr-{{number}}'
+            - name: image.tag
+              value: 'pr-{{number}}-{{head_sha}}'
+            - name: ingress.hosts[0].host
+              value: 'pr-{{number}}.preview.xyibank.ru'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'pr-{{number}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
