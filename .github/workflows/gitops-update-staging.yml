@@ -15,7 +15,6 @@ env:
 jobs:
   build-and-update:
     runs-on: ubuntu-latest
-    environment: staging
 
     steps:
       - name: Checkout
@@ -32,10 +31,6 @@ jobs:
         working-directory: monitoring-dashboard-api
         run: go test -v ./...
 
-      - name: Gateway unit tests
-        working-directory: monitoring-gateway
-        run: go test -v ./...
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -46,31 +41,24 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push images
+      - name: Build and push image
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           IMAGE_REPO="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}"
-          ANALYZER_IMAGE_TAG="${IMAGE_TAG}-release-analyzer"
-          GATEWAY_IMAGE_TAG="${IMAGE_TAG}-gateway"
 
-          # Build images
+          # Build main API image
           docker build -f monitoring-dashboard-api/Dockerfile \
-            -t "${IMAGE_REPO}:${IMAGE_TAG}" monitoring-dashboard-api
-          docker build -f monitoring-dashboard-api/Dockerfile.release-analyzer \
-            -t "${IMAGE_REPO}:${ANALYZER_IMAGE_TAG}" monitoring-dashboard-api
-          docker build -f monitoring-gateway/Dockerfile \
-            -t "${IMAGE_REPO}:${GATEWAY_IMAGE_TAG}" monitoring-gateway
+            -t "${IMAGE_REPO}:${IMAGE_TAG}" \
+            -t "${IMAGE_REPO}:latest" \
+            monitoring-dashboard-api
 
           # Push images
           docker push "${IMAGE_REPO}:${IMAGE_TAG}"
-          docker push "${IMAGE_REPO}:${ANALYZER_IMAGE_TAG}"
-          docker push "${IMAGE_REPO}:${GATEWAY_IMAGE_TAG}"
+          docker push "${IMAGE_REPO}:latest"
 
           # Export for next steps
           echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
-          echo "ANALYZER_IMAGE_TAG=${ANALYZER_IMAGE_TAG}" >> "$GITHUB_ENV"
-          echo "GATEWAY_IMAGE_TAG=${GATEWAY_IMAGE_TAG}" >> "$GITHUB_ENV"
 
       - name: Install yq
         run: |
@@ -78,35 +66,23 @@ jobs:
             https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
-      - name: Update ArgoCD Application manifest
+      - name: Update Helm values
         run: |
-          APP_MANIFEST="infra/argocd/applications/staging/monitoring-dashboard.yaml"
+          HELM_VALUES="infra/helm/monitoring-dashboard/values-staging.yaml"
 
-          # Update main API image tag
-          yq eval '(.spec.source.helm.parameters[] |
-            select(.name == "image.tag").value) = env(IMAGE_TAG)' \
-            -i "$APP_MANIFEST"
-
-          # Update release analyzer image tag
-          yq eval '(.spec.source.helm.parameters[] |
-            select(.name == "releaseAnalyzer.image.tag").value) = env(ANALYZER_IMAGE_TAG)' \
-            -i "$APP_MANIFEST"
-
-          # Update gateway image tag
-          yq eval '(.spec.source.helm.parameters[] |
-            select(.name == "gateway.image.tag").value) = env(GATEWAY_IMAGE_TAG)' \
-            -i "$APP_MANIFEST"
+          # Update image tag in Helm values
+          yq eval '.image.tag = env(IMAGE_TAG)' -i "$HELM_VALUES"
 
           # Show the changes
-          echo "Updated manifest:"
-          cat "$APP_MANIFEST"
+          echo "Updated values:"
+          git diff "$HELM_VALUES"
 
       - name: Commit and push image tag update
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          git add infra/argocd/applications/staging/monitoring-dashboard.yaml
+          git add infra/helm/monitoring-dashboard/values-staging.yaml
 
           # Check if there are changes to commit
           if git diff --staged --quiet; then
@@ -117,28 +93,19 @@ jobs:
           git commit -m "chore(gitops): update staging image to ${IMAGE_TAG}
 
 Built from commit: ${{ github.sha }}
-Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-Images:
-- API: ${IMAGE_TAG}
-- Release Analyzer: ${ANALYZER_IMAGE_TAG}
-- Gateway: ${GATEWAY_IMAGE_TAG}"
+Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           git push
 
       - name: Deployment summary
         run: |
-          echo "✅ Images built and pushed successfully"
-          echo "✅ ArgoCD manifest updated in Git"
+          echo "✅ Image built and pushed successfully"
+          echo "✅ Helm values updated in Git"
           echo ""
-          echo "📦 Image Tags:"
-          echo "  - API: ${IMAGE_TAG}"
-          echo "  - Release Analyzer: ${ANALYZER_IMAGE_TAG}"
-          echo "  - Gateway: ${GATEWAY_IMAGE_TAG}"
+          echo "📦 Image Tag: ${IMAGE_TAG}"
+          echo "🔗 ECR: ${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
           echo ""
-          echo "🔄 ArgoCD will automatically sync the changes"
-          echo "🔗 Monitor at: https://argocd-staging.xyibank.ru"
-          echo ""
-          echo "To check status:"
-          echo "  kubectl -n argocd get application monitoring-dashboard-staging"
-          echo "  kubectl -n monitoring-dashboard-staging get pods"
+          echo "Next steps:"
+          echo "  1. Verify image in ECR"
+          echo "  2. Deploy to staging using Helm"
+          echo "  3. Verify deployment: kubectl -n monitoring-dashboard get pods"
