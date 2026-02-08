@@ -40,6 +40,8 @@ spec:
               value: {{ .Values.config.LOG_LEVEL | quote }}
             - name: DB_SSL_MODE
               value: {{ .Values.config.DB_SSL_MODE | quote }}
+            - name: S3_ENABLED
+              value: "false"
           envFrom:
             - secretRef:
                 name: {{ .Values.secretRef.name }}
