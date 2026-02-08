@@ -20,4 +20,5 @@ data:
   UPSTREAM_REQUEST_TIMEOUT: {{ .Values.gateway.upstream.timeout | quote }}
   API_UPSTREAM_URL: {{ .Values.gateway.upstream.apiURL | quote }}
   ANALYZER_UPSTREAM_URL: {{ .Values.gateway.upstream.analyzerURL | quote }}
+  DB_SSL_MODE: {{ .Values.config.DB_SSL_MODE | default "disable" | quote }}
 {{- end }}
