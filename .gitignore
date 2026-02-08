@@ -55,6 +55,21 @@ DEPLOY_COMMANDS.sh
 # Temporary documentation
 IMPLEMENTATION_CHECKLIST.md
 NATS_IMPLEMENTATION_SUMMARY.md
+*_REPORT_*.md
+*_SUMMARY.md
+*_CHECKLIST.md
+
+# Experimental directories
+browser-tools-mcp/
+skills/
+k6/
+
+# Temporary local scripts
+START.sh
+docker-start.sh
+prepare-local.sh
+DEPLOY_NOW.sh
+QUICKSTART_PERFORMANCE.sh
 
 # Local binaries
 monitoring-dashboard-api/monitoring-dashboard-api
@@ -65,4 +80,5 @@ monitoring-dashboard-api/results/
 
 # Temporary config
 .golangci.yml
+.golangci-cache/
 infra/terraform/aws-config
