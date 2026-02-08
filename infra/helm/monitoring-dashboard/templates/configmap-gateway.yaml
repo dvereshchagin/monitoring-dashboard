@@ -21,6 +21,11 @@ data:
   API_UPSTREAM_URL: {{ .Values.gateway.upstream.apiURL | quote }}
   ANALYZER_UPSTREAM_URL: {{ .Values.gateway.upstream.analyzerURL | quote }}
   DB_SSL_MODE: {{ .Values.config.DB_SSL_MODE | default "disable" | quote }}
-  S3_ENABLED: "false"
+  S3_ENABLED: {{ .Values.config.S3_ENABLED | default "false" | quote }}
+  S3_BUCKET: {{ .Values.config.S3_BUCKET | default "" | quote }}
+  S3_REGION: {{ .Values.config.S3_REGION | default "" | quote }}
+  S3_ENDPOINT: {{ .Values.config.S3_ENDPOINT | default "" | quote }}
+  S3_USE_PATH_STYLE: {{ .Values.config.S3_USE_PATH_STYLE | default "false" | quote }}
+  SCREENSHOT_AUTH_ENABLED: {{ .Values.config.SCREENSHOT_AUTH_ENABLED | default "false" | quote }}
   ALLOWED_ORIGINS: {{ .Values.config.ALLOWED_ORIGINS | default "*" | quote }}
 {{- end }}
