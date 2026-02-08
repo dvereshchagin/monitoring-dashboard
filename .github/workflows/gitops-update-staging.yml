@@ -90,10 +90,12 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore(gitops): update staging image to ${IMAGE_TAG}
+          COMMIT_MSG="chore(gitops): update staging image to ${IMAGE_TAG}
 
-Built from commit: ${{ github.sha }}
-Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          Built from commit: ${{ github.sha }}
+          Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          git commit -m "$COMMIT_MSG"
 
           git push
 
