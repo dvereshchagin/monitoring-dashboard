@@ -51,7 +51,7 @@ config:
   AUTH_ENABLED: "false"
   SCREENSHOT_AUTH_ENABLED: "false"
   DB_SSL_MODE: "require"
-  ALLOWED_ORIGINS: "*"
+  ALLOWED_ORIGINS: "https://staging.xyibank.ru"
   S3_ENABLED: "true"
   S3_BUCKET: "monitoring-dashboard-staging-screenshots-729665432048"
   S3_REGION: "eu-north-1"
