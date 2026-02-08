@@ -140,4 +140,4 @@ ingress:
           pathType: Prefix
 image:
   repository: 729665432048.dkr.ecr.eu-north-1.amazonaws.com/monitoring-dashboard-api
-  tag: 1cd903900a099024c1ee85eff3828c8122191662
+  tag: staging-20260208132956
