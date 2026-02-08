@@ -1,8 +1,6 @@
 replicaCount: 2
-
 ha:
   enabled: true
-
 # Redis Cache for Performance
 redis:
   enabled: true
@@ -14,23 +12,19 @@ redis:
     limits:
       memory: "1Gi"
       cpu: "500m"
-
 # Database Migrations
 migrations:
   enabled: true
   version: "003"
-
 autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 8
   targetCPUUtilizationPercentage: 65
   targetMemoryUtilizationPercentage: 75
-
 releaseAnalyzer:
   enabled: true
   interval: 20s
-
 gateway:
   enabled: true
   replicaCount: 2
@@ -41,11 +35,9 @@ gateway:
     minAvailable: 1
   auth:
     enabled: false
-
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
-
 config:
   AUTH_ENABLED: "false"
   SCREENSHOT_AUTH_ENABLED: "false"
@@ -56,11 +48,9 @@ config:
   S3_REGION: "eu-north-1"
   S3_ENDPOINT: "https://s3.eu-north-1.amazonaws.com"
   S3_USE_PATH_STYLE: "true"
-
   # Performance Optimizations - 100+ RPS support
   DB_MAX_OPEN_CONNS: "100"
   DB_MAX_IDLE_CONNS: "50"
-
   # Redis Cache
   REDIS_ENABLED: "true"
   REDIS_HOST: "redis-cache"
@@ -72,7 +62,6 @@ config:
   REDIS_DIAL_TIMEOUT: "5s"
   REDIS_READ_TIMEOUT: "3s"
   REDIS_WRITE_TIMEOUT: "3s"
-
   # CloudWatch Integration (disabled until credentials configured)
   CLOUDWATCH_METRICS_ENABLED: "false"
   CLOUDWATCH_LOGS_ENABLED: "false"
@@ -86,7 +75,6 @@ config:
   CLOUDWATCH_LOG_STREAM: "application"
   CLOUDWATCH_LOGS_BUFFER_SIZE: "50"
   CLOUDWATCH_LOGS_FLUSH_INTERVAL: "5s"
-
 externalSecrets:
   data:
     - secretKey: DB_HOST
@@ -129,7 +117,6 @@ externalSecrets:
       remoteRef:
         key: /monitoring-dashboard/staging/app
         property: CLOUDWATCH_SECRET_ACCESS_KEY
-
 ingress:
   hosts:
     - host: staging.xyibank.ru
@@ -148,3 +135,5 @@ ingress:
           useGateway: true
         - path: /
           pathType: Prefix
+image:
+  tag: 1dd29493d3b5bd36da519ac962c9bf7d53efb1e1
