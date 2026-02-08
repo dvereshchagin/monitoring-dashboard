@@ -27,6 +27,7 @@ spec:
         - name: release-analyzer
           image: "{{ $imageRepo }}:{{ $imageTag }}"
           imagePullPolicy: {{ $imagePullPolicy }}
+          command: ["/app/release-analyzer"]
           ports:
             - name: http
               containerPort: {{ .Values.releaseAnalyzer.port }}
