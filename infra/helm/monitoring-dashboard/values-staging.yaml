@@ -14,8 +14,11 @@ redis:
       cpu: "500m"
 # Database Migrations
 migrations:
-  enabled: true
+  enabled: false  # Disable for now - will run manually
   version: "003"
+# Secret Reference
+secretRef:
+  name: monitoring-dashboard-staging-secrets
 autoscaling:
   enabled: true
   minReplicas: 2
