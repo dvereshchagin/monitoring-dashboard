@@ -22,4 +22,5 @@ data:
   ANALYZER_UPSTREAM_URL: {{ .Values.gateway.upstream.analyzerURL | quote }}
   DB_SSL_MODE: {{ .Values.config.DB_SSL_MODE | default "disable" | quote }}
   S3_ENABLED: "false"
+  ALLOWED_ORIGINS: {{ .Values.config.ALLOWED_ORIGINS | default "*" | quote }}
 {{- end }}
