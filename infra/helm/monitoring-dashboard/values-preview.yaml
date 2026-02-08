@@ -1,5 +1,8 @@
 replicaCount: 1
 
+ha:
+  enabled: false
+
 resources:
   requests:
     cpu: 100m
@@ -14,7 +17,15 @@ autoscaling:
 podDisruptionBudget:
   enabled: false
 
+gateway:
+  replicaCount: 1
+  ha:
+    enabled: false
+  podDisruptionBudget:
+    enabled: false
+
 config:
+  DB_SSL_MODE: "require"
   METRICS_RETENTION_DAYS: "3"
   LOG_LEVEL: "debug"
 

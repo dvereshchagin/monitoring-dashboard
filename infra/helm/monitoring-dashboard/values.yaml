@@ -1,9 +1,26 @@
-replicaCount: 2
+replicaCount: 1
 
 image:
   repository: ""
   tag: "latest"
   pullPolicy: IfNotPresent
+
+releaseAnalyzer:
+  enabled: false
+  replicaCount: 1
+  image:
+    repository: ""
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  port: 8081
+  interval: 30s
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 150m
+      memory: 128Mi
 
 nameOverride: ""
 fullnameOverride: ""
@@ -32,35 +49,117 @@ ingress:
   hosts:
     - host: staging.xyibank.ru
       paths:
+        - path: /api/v1/release-analyzer
+          pathType: Prefix
+          useGateway: true
+        - path: /api/v1
+          pathType: Prefix
+          useGateway: true
+        - path: /api
+          pathType: Prefix
+          useGateway: true
+        - path: /ws
+          pathType: Prefix
+          useGateway: true
         - path: /
           pathType: Prefix
   tls: []
 
+gateway:
+  enabled: false
+  replicaCount: 1
+  ha:
+    enabled: false
+  logLevel: info
+  image:
+    repository: ""
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8082
+    targetPort: 8082
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+  rbac:
+    create: true
+  auth:
+    enabled: true
+  discovery:
+    enabled: true
+    refreshInterval: 30s
+    apiServiceSelector: app.kubernetes.io/name=monitoring-dashboard
+    analyzerServiceSelector: app.kubernetes.io/name=monitoring-dashboard-release-analyzer
+    analyzerRequired: true
+  upstream:
+    timeout: 8s
+    apiURL: http://localhost:8080
+    analyzerURL: http://localhost:8081
+  rateLimit:
+    rps: 100
+    burst: 200
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+
 resources:
   requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
     cpu: 200m
     memory: 256Mi
-  limits:
-    cpu: 500m
-    memory: 512Mi
 
 autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 5
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
   targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 75
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 20
+          periodSeconds: 60
 
 podDisruptionBudget:
-  enabled: true
+  enabled: false
   minAvailable: 1
+
+ha:
+  enabled: false
 
 config:
   SERVER_PORT: "8080"
+  DB_SSL_MODE: "disable"
   METRICS_COLLECTION_INTERVAL: "2s"
   METRICS_RETENTION_DAYS: "7"
   LOG_LEVEL: "info"
   ALLOWED_ORIGINS: "https://staging.xyibank.ru"
   AUTH_ENABLED: "true"
+  SCREENSHOT_AUTH_ENABLED: "true"
   S3_ENABLED: "false"
   S3_REGION: "eu-north-1"
   S3_ENDPOINT: ""

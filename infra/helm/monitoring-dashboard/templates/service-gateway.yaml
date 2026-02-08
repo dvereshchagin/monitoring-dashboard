@@ -1,0 +1,19 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "monitoring-dashboard.gatewayFullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: {{ .Values.gateway.service.type }}
+  ports:
+    - port: {{ .Values.gateway.service.port }}
+      targetPort: {{ .Values.gateway.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

@@ -1,0 +1,28 @@
+{{- if and .Values.gateway.enabled .Values.gateway.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "monitoring-dashboard.gatewayFullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+rules:
+  - apiGroups: [""]
+    resources: ["services", "endpoints", "pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "monitoring-dashboard.gatewayFullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "monitoring-dashboard.gatewayServiceAccountName" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "monitoring-dashboard.gatewayFullname" . }}
+{{- end }}

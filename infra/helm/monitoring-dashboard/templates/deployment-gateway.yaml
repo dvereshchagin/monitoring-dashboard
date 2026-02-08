@@ -1,48 +1,47 @@
+{{- if .Values.gateway.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "monitoring-dashboard.fullname" . }}
+  name: {{ include "monitoring-dashboard.gatewayFullname" . }}
   labels:
-    app.kubernetes.io/name: {{ include "monitoring-dashboard.name" . }}
+    app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
+  replicas: {{ .Values.gateway.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "monitoring-dashboard.name" . }}
+      app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "monitoring-dashboard.name" . }}
+        app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
-        {{- with .Values.podLabels }}
+        {{- with .Values.gateway.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- with .Values.podAnnotations }}
+      {{- with .Values.gateway.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "monitoring-dashboard.serviceAccountName" . }}
+      serviceAccountName: {{ include "monitoring-dashboard.gatewayServiceAccountName" . }}
       containers:
-        - name: monitoring-dashboard
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+        - name: monitoring-gateway
+          image: "{{ .Values.gateway.image.repository }}:{{ .Values.gateway.image.tag }}"
+          imagePullPolicy: {{ .Values.gateway.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.targetPort }}
+              containerPort: {{ .Values.gateway.service.targetPort }}
               protocol: TCP
           env:
-            - name: RELEASE_ANALYZER_BASE_URL
-              value: {{ printf "http://%s-release-analyzer:%v" (include "monitoring-dashboard.fullname" .) .Values.releaseAnalyzer.port | quote }}
-            - name: RELEASE_ANALYZER_REQUEST_TIMEOUT
-              value: "6s"
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           envFrom:
             - configMapRef:
-                name: {{ include "monitoring-dashboard.fullname" . }}-config
+                name: {{ include "monitoring-dashboard.gatewayFullname" . }}-config
             - secretRef:
                 name: {{ .Values.secretRef.name }}
           readinessProbe:
@@ -55,7 +54,7 @@ spec:
             httpGet:
               path: /healthz
               port: http
-            initialDelaySeconds: 15
+            initialDelaySeconds: 10
             periodSeconds: 20
           startupProbe:
             httpGet:
@@ -64,33 +63,34 @@ spec:
             failureThreshold: 12
             periodSeconds: 5
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+      {{- with .Values.gateway.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with .Values.gateway.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if .Values.ha.enabled }}
+      {{- if .Values.gateway.ha.enabled }}
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
-              app.kubernetes.io/name: {{ include "monitoring-dashboard.name" . }}
+              app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
-              app.kubernetes.io/name: {{ include "monitoring-dashboard.name" . }}
+              app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.gateway.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}

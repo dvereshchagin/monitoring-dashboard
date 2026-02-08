@@ -8,13 +8,19 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
   {{- with .Values.ingress.annotations }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- range $k, $v := . }}
+    {{- if ne (printf "%v" $v) "" }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+    {{- end }}
   {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
     {{- range .Values.ingress.hosts }}
-    - host: {{ .host | quote }}
+    - {{- if .host }}
+      host: {{ .host | quote }}
+      {{- end }}
       http:
         paths:
           {{- range .paths }}
@@ -22,9 +28,17 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
+                {{- if and $.Values.gateway.enabled .useGateway }}
+                name: {{ include "monitoring-dashboard.gatewayFullname" $ }}
+                {{- else }}
                 name: {{ include "monitoring-dashboard.fullname" $ }}
+                {{- end }}
                 port:
+                  {{- if and $.Values.gateway.enabled .useGateway }}
+                  number: {{ $.Values.gateway.service.port }}
+                  {{- else }}
                   number: {{ $.Values.service.port }}
+                  {{- end }}
           {{- end }}
     {{- end }}
   {{- with .Values.ingress.tls }}

@@ -1,0 +1,23 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "monitoring-dashboard.gatewayFullname" . }}-config
+  labels:
+    app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  SERVER_PORT: {{ .Values.gateway.service.targetPort | quote }}
+  LOG_LEVEL: {{ .Values.gateway.logLevel | quote }}
+  AUTH_ENABLED: {{ .Values.gateway.auth.enabled | quote }}
+  K8S_DISCOVERY_ENABLED: {{ .Values.gateway.discovery.enabled | quote }}
+  K8S_DISCOVERY_REFRESH_INTERVAL: {{ .Values.gateway.discovery.refreshInterval | quote }}
+  K8S_SERVICE_SELECTOR_API: {{ .Values.gateway.discovery.apiServiceSelector | quote }}
+  K8S_SERVICE_SELECTOR_ANALYZER: {{ .Values.gateway.discovery.analyzerServiceSelector | quote }}
+  ANALYZER_REQUIRED: {{ .Values.gateway.discovery.analyzerRequired | quote }}
+  RATE_LIMIT_RPS: {{ .Values.gateway.rateLimit.rps | quote }}
+  RATE_LIMIT_BURST: {{ .Values.gateway.rateLimit.burst | quote }}
+  UPSTREAM_REQUEST_TIMEOUT: {{ .Values.gateway.upstream.timeout | quote }}
+  API_UPSTREAM_URL: {{ .Values.gateway.upstream.apiURL | quote }}
+  ANALYZER_UPSTREAM_URL: {{ .Values.gateway.upstream.analyzerURL | quote }}
+{{- end }}

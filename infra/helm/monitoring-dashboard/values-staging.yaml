@@ -3,6 +3,23 @@ replicaCount: 2
 ha:
   enabled: true
 
+# Redis Cache for Performance
+redis:
+  enabled: true
+  maxMemory: "1gb"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Database Migrations
+migrations:
+  enabled: true
+  version: "003"
+
 autoscaling:
   enabled: true
   minReplicas: 2
@@ -40,9 +57,25 @@ config:
   S3_ENDPOINT: "https://s3.eu-north-1.amazonaws.com"
   S3_USE_PATH_STYLE: "true"
 
-  # CloudWatch Integration
-  CLOUDWATCH_METRICS_ENABLED: "true"
-  CLOUDWATCH_LOGS_ENABLED: "true"
+  # Performance Optimizations - 100+ RPS support
+  DB_MAX_OPEN_CONNS: "100"
+  DB_MAX_IDLE_CONNS: "50"
+
+  # Redis Cache
+  REDIS_ENABLED: "true"
+  REDIS_HOST: "redis-cache"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_CACHE_TTL: "60s"
+  REDIS_POOL_SIZE: "100"
+  REDIS_MIN_IDLE_CONNS: "20"
+  REDIS_DIAL_TIMEOUT: "5s"
+  REDIS_READ_TIMEOUT: "3s"
+  REDIS_WRITE_TIMEOUT: "3s"
+
+  # CloudWatch Integration (disabled until credentials configured)
+  CLOUDWATCH_METRICS_ENABLED: "false"
+  CLOUDWATCH_LOGS_ENABLED: "false"
   CLOUDWATCH_REGION: "us-east-1"
   CLOUDWATCH_METRICS_NAMESPACE: "MonitoringDashboard/Staging"
   CLOUDWATCH_METRICS_BUFFER_SIZE: "100"

@@ -1,19 +1,43 @@
-replicaCount: 3
+replicaCount: 2
+
+ha:
+  enabled: true
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 75
 
 resources:
   requests:
-    cpu: 300m
-    memory: 512Mi
+    cpu: 100m
+    memory: 128Mi
   limits:
-    cpu: 1000m
-    memory: 1024Mi
+    cpu: 200m
+    memory: 256Mi
 
-autoscaling:
-  minReplicas: 3
-  maxReplicas: 8
+releaseAnalyzer:
+  enabled: true
+  interval: 20s
+
+gateway:
+  enabled: true
+  replicaCount: 2
+  ha:
+    enabled: true
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
 
 config:
-  METRICS_RETENTION_DAYS: "30"
+  DB_SSL_MODE: "require"
+  METRICS_RETENTION_DAYS: "7"
   ALLOWED_ORIGINS: "https://dashboard.xyibank.ru"
 
 externalSecrets:
@@ -47,5 +71,17 @@ ingress:
   hosts:
     - host: dashboard.xyibank.ru
       paths:
+        - path: /api/v1/release-analyzer
+          pathType: Prefix
+          useGateway: true
+        - path: /api/v1
+          pathType: Prefix
+          useGateway: true
+        - path: /api
+          pathType: Prefix
+          useGateway: true
+        - path: /ws
+          pathType: Prefix
+          useGateway: true
         - path: /
           pathType: Prefix

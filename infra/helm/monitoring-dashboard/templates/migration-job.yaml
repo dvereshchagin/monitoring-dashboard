@@ -1,0 +1,83 @@
+{{- if .Values.migrations.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "monitoring-dashboard.fullname" . }}-migration-{{ .Values.migrations.version }}
+  labels:
+    {{- include "monitoring-dashboard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    "helm.sh/hook": pre-upgrade,pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "monitoring-dashboard.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: migration
+        image: postgres:14-alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          cat <<'EOF' | psql -h $DB_HOST -U $DB_USER -d $DB_NAME
+          -- Migration 003: Performance Optimizations for 100+ RPS
+
+          -- Covering index with INCLUDE
+          CREATE INDEX IF NOT EXISTS idx_metrics_type_time_covering
+              ON metrics(metric_type, collected_at DESC)
+              INCLUDE (metric_name, value, unit, metadata);
+
+          -- Optimize DISTINCT ON queries
+          CREATE INDEX IF NOT EXISTS idx_metrics_type_time_id
+              ON metrics(metric_type, collected_at DESC, id);
+
+          -- Partial index for recent data (7 days) - most queried
+          CREATE INDEX IF NOT EXISTS idx_metrics_recent
+              ON metrics(metric_type, collected_at DESC)
+              WHERE collected_at > NOW() - INTERVAL '7 days';
+
+          -- Materialized view for hourly aggregation
+          DROP MATERIALIZED VIEW IF EXISTS metrics_hourly CASCADE;
+          CREATE MATERIALIZED VIEW metrics_hourly AS
+          SELECT
+              metric_type,
+              metric_name,
+              DATE_TRUNC('hour', collected_at) as hour_bucket,
+              AVG(value) as avg_value,
+              MIN(value) as min_value,
+              MAX(value) as max_value,
+              COUNT(*) as sample_count,
+              unit
+          FROM metrics
+          WHERE collected_at > NOW() - INTERVAL '30 days'
+          GROUP BY metric_type, metric_name, hour_bucket, unit;
+
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_metrics_hourly_unique
+              ON metrics_hourly(metric_type, metric_name, hour_bucket);
+
+          CREATE INDEX IF NOT EXISTS idx_metrics_hourly_time
+              ON metrics_hourly(hour_bucket DESC);
+
+          -- Verify indexes created
+          \echo ''
+          \echo 'Migration 003 completed successfully!'
+          \echo 'Created indexes:'
+          SELECT indexname FROM pg_indexes WHERE tablename = 'metrics' ORDER BY indexname;
+          EOF
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "monitoring-dashboard.fullname" . }}
+              key: DB_PASSWORD
+        envFrom:
+        - secretRef:
+            name: {{ include "monitoring-dashboard.fullname" . }}
+{{- end }}

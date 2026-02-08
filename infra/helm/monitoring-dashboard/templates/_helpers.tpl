@@ -22,3 +22,19 @@
 {{- default "default" .Values.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "monitoring-dashboard.gatewayName" -}}
+{{- printf "%s-gateway" (include "monitoring-dashboard.name" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "monitoring-dashboard.gatewayFullname" -}}
+{{- printf "%s-gateway" (include "monitoring-dashboard.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "monitoring-dashboard.gatewayServiceAccountName" -}}
+{{- if .Values.gateway.serviceAccount.create -}}
+{{- default (include "monitoring-dashboard.gatewayFullname" .) .Values.gateway.serviceAccount.name -}}
+{{- else -}}
+{{- default "default" .Values.gateway.serviceAccount.name -}}
+{{- end -}}
+{{- end -}}

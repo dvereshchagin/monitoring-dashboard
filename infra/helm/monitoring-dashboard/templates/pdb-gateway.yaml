@@ -1,0 +1,15 @@
+{{- if and .Values.gateway.enabled .Values.gateway.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "monitoring-dashboard.gatewayFullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  minAvailable: {{ .Values.gateway.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "monitoring-dashboard.gatewayName" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
