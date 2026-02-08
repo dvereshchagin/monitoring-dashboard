@@ -49,11 +49,11 @@ jobs:
 
           IMAGE_REPO="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}"
 
-          # Build main API image
-          docker build -f monitoring-dashboard-api/Dockerfile \
+          # Build image with all binaries (api, release-analyzer, gateway)
+          docker build -f Dockerfile \
             -t "${IMAGE_REPO}:${IMAGE_TAG}" \
             -t "${IMAGE_REPO}:latest" \
-            monitoring-dashboard-api
+            .
 
           # Push images
           docker push "${IMAGE_REPO}:${IMAGE_TAG}"
@@ -69,8 +69,10 @@ jobs:
         run: |
           HELM_VALUES="infra/helm/monitoring-dashboard/values-staging.yaml"
 
-          # Update image tag in Helm values
+          # Update image tag in Helm values for all components
           yq eval '.image.tag = env(IMAGE_TAG)' -i "$HELM_VALUES"
+          yq eval '.gateway.image.tag = env(IMAGE_TAG)' -i "$HELM_VALUES"
+          yq eval '.releaseAnalyzer.image.tag = env(IMAGE_TAG)' -i "$HELM_VALUES"
 
           # Show the changes
           echo "Updated values:"
