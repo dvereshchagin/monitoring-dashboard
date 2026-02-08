@@ -13,15 +13,17 @@ COPY . ./
 RUN go install github.com/a-h/templ/cmd/templ@v0.3.977
 RUN templ generate
 
-# Build the application
+# Build the applications
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /out/monitoring-dashboard cmd/monitoring-dashboard-api/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /out/release-analyzer cmd/release-analyzer/main.go
 
 FROM gcr.io/distroless/base-debian12
 
 WORKDIR /app
 
-# Copy binary
+# Copy binaries
 COPY --from=builder /out/monitoring-dashboard /app/monitoring-dashboard
+COPY --from=builder /out/release-analyzer /app/release-analyzer
 
 EXPOSE 8080
 USER nonroot:nonroot
