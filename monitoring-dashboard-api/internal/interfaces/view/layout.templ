@@ -15,13 +15,27 @@ templ Layout(title string) {
 		<body>
 			<nav class="navbar">
 				<div class="container">
-					<h1>System Monitoring Dashboard</h1>
+					<div class="navbar-main">
+						<h1>pizda System Monitoring Dashboard</h1>
+						<div class="navbar-meta">
+							<span class="deploy-marker">build: preview-ui-v2</span>
+							<span class="host-marker">host: <span id="current-host">unknown</span></span>
+						</div>
+					</div>
 				</div>
 			</nav>
 			<main class="container">
 				{ children... }
 			</main>
 			<script src="/static/js/websocket.js"></script>
+			<script>
+				(function () {
+					const hostNode = document.getElementById("current-host");
+					if (hostNode) {
+						hostNode.textContent = window.location.hostname || "unknown";
+					}
+				})();
+			</script>
 		</body>
 	</html>
 }

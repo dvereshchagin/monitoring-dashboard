@@ -23,6 +23,61 @@ templ Dashboard(snapshot *dto.MetricSnapshotDTO) {
 			<span id="connection-status" class="status connected">● Connected</span>
 			<span id="client-count">Clients: <span id="client-count-value">-</span></span>
 		</div>
+		<div class="release-analyzer-panel">
+			<div class="release-analyzer-header">
+				<h3>Release Analyzer</h3>
+				<button id="ra-run-btn" class="action-btn" type="button">Run now</button>
+			</div>
+			<div class="release-analyzer-summary">
+				<div>State: <span id="ra-state" class="ra-state unknown">Unknown</span></div>
+				<div>Last run: <span id="ra-last-run">-</span></div>
+				<div>Total metrics: <span id="ra-metrics-total">-</span></div>
+				<div>Warnings: <span id="ra-warning-count">-</span></div>
+				<div>Critical: <span id="ra-critical-count">-</span></div>
+				<div>Oldest metric age: <span id="ra-oldest-age">-</span></div>
+			</div>
+			<div id="ra-last-error" class="ra-last-error hidden"></div>
+			<div class="release-analyzer-table-wrapper">
+				<table class="release-analyzer-table">
+					<thead>
+						<tr>
+							<th>Metric</th>
+							<th>Value</th>
+							<th>Unit</th>
+							<th>Severity</th>
+							<th>Collected At</th>
+						</tr>
+					</thead>
+					<tbody id="ra-assessments-body">
+						<tr>
+							<td colspan="5">No data yet</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="release-analyzer-meta">
+				Updated at: <span id="ra-updated-at">-</span>
+			</div>
+		</div>
+		<div class="screenshot-gallery-panel">
+			<div class="screenshot-gallery-header">
+				<h3>Dashboard Screenshots</h3>
+				<div class="screenshot-gallery-actions">
+					<button id="screenshots-refresh-btn" class="action-btn" type="button">Refresh list</button>
+					<div class="screenshot-gallery-pagination">
+						<button id="screenshots-prev-btn" class="action-btn screenshot-page-btn" type="button" disabled>Prev</button>
+						<span id="screenshots-page-label" class="screenshot-page-label">Page 1</span>
+						<button id="screenshots-next-btn" class="action-btn screenshot-page-btn" type="button" disabled>Next</button>
+					</div>
+				</div>
+			</div>
+			<div class="screenshot-gallery-meta">
+				Updated at: <span id="screenshots-updated-at">-</span>
+			</div>
+			<div id="screenshots-grid" class="screenshot-gallery-grid">
+				<div class="screenshot-gallery-empty">No screenshots yet</div>
+			</div>
+		</div>
 		<div class="charts-container">
 			<div class="chart-wrapper">
 				<h3>CPU History (1 Hour)</h3>
