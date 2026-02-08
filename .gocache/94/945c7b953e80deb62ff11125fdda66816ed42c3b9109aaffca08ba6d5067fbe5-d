@@ -1,4 +1,0 @@
-./collect_metrics.go
-./get_current_metrics.go
-./get_historical_metrics.go
-./save_dashboard_screenshots.go

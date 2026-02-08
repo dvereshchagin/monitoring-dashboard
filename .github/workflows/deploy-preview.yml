@@ -55,8 +55,11 @@ jobs:
           IMAGE_TAG: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
         run: |
           IMAGE_REPO="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}"
-          docker build -f monitoring-dashboard-api/Dockerfile -t "${IMAGE_REPO}:${IMAGE_TAG}" monitoring-dashboard-api
+
+          # Build unified image with all binaries (api, release-analyzer, gateway)
+          docker build -f Dockerfile -t "${IMAGE_REPO}:${IMAGE_TAG}" .
           docker push "${IMAGE_REPO}:${IMAGE_TAG}"
+
           echo "IMAGE_REPO=${IMAGE_REPO}" >> "$GITHUB_ENV"
           echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
 
@@ -84,6 +87,10 @@ jobs:
             --set fullnameOverride="$RELEASE" \
             --set image.repository="$IMAGE_REPO" \
             --set image.tag="$IMAGE_TAG" \
+            --set gateway.image.repository="$IMAGE_REPO" \
+            --set gateway.image.tag="$IMAGE_TAG" \
+            --set releaseAnalyzer.image.repository="$IMAGE_REPO" \
+            --set releaseAnalyzer.image.tag="$IMAGE_TAG" \
             --set ingress.hosts[0].host="$HOST" \
             --set config.ALLOWED_ORIGINS="https://$HOST" \
             --set externalSecrets.targetSecretName="${RELEASE}-secrets" \

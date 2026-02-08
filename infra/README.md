@@ -17,6 +17,7 @@ This repository contains enterprise infrastructure setup for Monitoring Dashboar
 - **[TERRAFORM_EXPLAINED.md](./docs/TERRAFORM_EXPLAINED.md)** - Complete Terraform explanation with examples
 - **[TERRAFORM_CHEATSHEET.md](./docs/TERRAFORM_CHEATSHEET.md)** - Quick reference for commands and syntax
 - **[TERRAFORM_PROJECT_GUIDE.md](./docs/TERRAFORM_PROJECT_GUIDE.md)** - Project-specific architecture and workflows
+- **[INTERVIEW_INFRA_GUIDE.md](./docs/INTERVIEW_INFRA_GUIDE.md)** - Overview, Terraform/K8s/Helm for beginners, dependency diagrams, interview prep
 
 ## Environment model
 
