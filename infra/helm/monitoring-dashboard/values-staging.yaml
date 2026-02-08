@@ -14,7 +14,7 @@ redis:
       cpu: "500m"
 # Database Migrations
 migrations:
-  enabled: false  # Disable for now - will run manually
+  enabled: false # Disable for now - will run manually
   version: "003"
 # Secret Reference
 secretRef:
@@ -139,4 +139,4 @@ ingress:
         - path: /
           pathType: Prefix
 image:
-  tag: c3eb829930fdb5936297e751c7f6eebb509bfa73
+  tag: b3cddf0fbf42f028f1de6cfe1676daf9366d09bd
