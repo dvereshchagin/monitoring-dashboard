@@ -43,7 +43,7 @@ jobs:
 
       - name: Build and push image
         env:
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: staging-$(date +%Y%m%d%H%M%S)
         run: |
           IMAGE_REPO="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}"
 
