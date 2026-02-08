@@ -42,9 +42,11 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push image
-        env:
-          IMAGE_TAG: staging-$(date +%Y%m%d%H%M%S)
         run: |
+          # Generate timestamp-based image tag
+          IMAGE_TAG="staging-$(date +%Y%m%d%H%M%S)"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
+
           IMAGE_REPO="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}"
 
           # Build main API image
@@ -56,9 +58,6 @@ jobs:
           # Push images
           docker push "${IMAGE_REPO}:${IMAGE_TAG}"
           docker push "${IMAGE_REPO}:latest"
-
-          # Export for next steps
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
 
       - name: Install yq
         run: |
