@@ -1,7 +1,58 @@
 replicaCount: 2
 
+ha:
+  enabled: true
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 65
+  targetMemoryUtilizationPercentage: 75
+
+releaseAnalyzer:
+  enabled: true
+  interval: 20s
+
+gateway:
+  enabled: true
+  replicaCount: 2
+  ha:
+    enabled: true
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  auth:
+    enabled: false
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
 config:
-  ALLOWED_ORIGINS: "https://staging.xyibank.ru"
+  AUTH_ENABLED: "false"
+  SCREENSHOT_AUTH_ENABLED: "false"
+  DB_SSL_MODE: "require"
+  ALLOWED_ORIGINS: "*"
+  S3_ENABLED: "true"
+  S3_BUCKET: "monitoring-dashboard-staging-screenshots-729665432048"
+  S3_REGION: "eu-north-1"
+  S3_ENDPOINT: "https://s3.eu-north-1.amazonaws.com"
+  S3_USE_PATH_STYLE: "true"
+
+  # CloudWatch Integration
+  CLOUDWATCH_METRICS_ENABLED: "true"
+  CLOUDWATCH_LOGS_ENABLED: "true"
+  CLOUDWATCH_REGION: "us-east-1"
+  CLOUDWATCH_METRICS_NAMESPACE: "MonitoringDashboard/Staging"
+  CLOUDWATCH_METRICS_BUFFER_SIZE: "100"
+  CLOUDWATCH_METRICS_FLUSH_INTERVAL: "10s"
+  CLOUDWATCH_METRICS_STORAGE_RESOLUTION: "60"
+  CLOUDWATCH_METRICS_DIMENSIONS: "Environment=staging,Cluster=eu-north-1"
+  CLOUDWATCH_LOG_GROUP: "/aws/monitoring-dashboard/staging"
+  CLOUDWATCH_LOG_STREAM: "application"
+  CLOUDWATCH_LOGS_BUFFER_SIZE: "50"
+  CLOUDWATCH_LOGS_FLUSH_INTERVAL: "5s"
 
 externalSecrets:
   data:
@@ -29,10 +80,38 @@ externalSecrets:
       remoteRef:
         key: /monitoring-dashboard/staging/app
         property: AUTH_BEARER_TOKEN
+    - secretKey: S3_ACCESS_KEY_ID
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: S3_ACCESS_KEY_ID
+    - secretKey: S3_SECRET_ACCESS_KEY
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: S3_SECRET_ACCESS_KEY
+    - secretKey: CLOUDWATCH_ACCESS_KEY_ID
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: CLOUDWATCH_ACCESS_KEY_ID
+    - secretKey: CLOUDWATCH_SECRET_ACCESS_KEY
+      remoteRef:
+        key: /monitoring-dashboard/staging/app
+        property: CLOUDWATCH_SECRET_ACCESS_KEY
 
 ingress:
   hosts:
     - host: staging.xyibank.ru
       paths:
+        - path: /api/v1/release-analyzer
+          pathType: Prefix
+          useGateway: true
+        - path: /api/v1
+          pathType: Prefix
+          useGateway: true
+        - path: /api
+          pathType: Prefix
+          useGateway: true
+        - path: /ws
+          pathType: Prefix
+          useGateway: true
         - path: /
           pathType: Prefix
