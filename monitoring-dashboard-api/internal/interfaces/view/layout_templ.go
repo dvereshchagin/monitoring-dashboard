@@ -42,7 +42,7 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " - Monitoring Dashboard</title><script src=\"https://unpkg.com/htmx.org@1.9.10\"></script><script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0\"></script><script src=\"https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js\"></script><link rel=\"stylesheet\" href=\"/static/css/style.css\"></head><body><nav class=\"navbar\"><div class=\"container\"><div class=\"navbar-main\"><h1>pizda System Monitoring Dashboard</h1><div class=\"navbar-meta\"><span class=\"deploy-marker\">build: preview-ui-v2</span> <span class=\"host-marker\">host: <span id=\"current-host\">unknown</span></span></div></div></div></nav><main class=\"container\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " - Monitoring Dashboard</title><script src=\"https://unpkg.com/htmx.org@1.9.10\"></script><script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0\"></script><script src=\"https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js\"></script><link rel=\"stylesheet\" href=\"/static/css/style.css\"></head><body><nav class=\"navbar\"><div class=\"container\"><div class=\"navbar-main\"><h1>System Monitoring Dashboard</h1><div class=\"navbar-meta\"><span class=\"deploy-marker\">build: preview-ui-v2</span> <span class=\"host-marker\">host: <span id=\"current-host\">unknown</span></span></div></div></div></nav><main class=\"container\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
