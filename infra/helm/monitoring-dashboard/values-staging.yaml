@@ -139,4 +139,4 @@ ingress:
         - path: /
           pathType: Prefix
 image:
-  tag: ee70973581428331d2cc8252a218a6fcdd81c182
+  tag: 31396dc71709ea45ab8c48e8a689387860251a06
