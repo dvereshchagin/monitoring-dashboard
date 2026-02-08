@@ -38,3 +38,16 @@
 {{- default "default" .Values.gateway.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "monitoring-dashboard.labels" -}}
+helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+app.kubernetes.io/name: {{ include "monitoring-dashboard.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end -}}
+
+{{- define "monitoring-dashboard.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "monitoring-dashboard.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
