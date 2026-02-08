@@ -12,14 +12,15 @@ import (
 
 // Router настраивает маршруты приложения
 type Router struct {
-	mux                  *http.ServeMux
-	dashboardHandler     *handler.DashboardHandler
-	websocketHandler     *handler.WebSocketHandler
-	metricsAPIHandler    *handler.MetricsAPIHandler
-	screenshotAPIHandler *handler.ScreenshotAPIHandler
-	authAPIHandler       *handler.AuthAPIHandler
-	security             config.SecurityConfig
-	logger               *logger.Logger
+	mux                       *http.ServeMux
+	dashboardHandler          *handler.DashboardHandler
+	websocketHandler          *handler.WebSocketHandler
+	metricsAPIHandler         *handler.MetricsAPIHandler
+	screenshotAPIHandler      *handler.ScreenshotAPIHandler
+	authAPIHandler            *handler.AuthAPIHandler
+	releaseAnalyzerAPIHandler *handler.ReleaseAnalyzerAPIHandler
+	security                  config.SecurityConfig
+	logger                    *logger.Logger
 }
 
 // NewRouter создает новый router
@@ -29,18 +30,20 @@ func NewRouter(
 	metricsAPIHandler *handler.MetricsAPIHandler,
 	screenshotAPIHandler *handler.ScreenshotAPIHandler,
 	authAPIHandler *handler.AuthAPIHandler,
+	releaseAnalyzerAPIHandler *handler.ReleaseAnalyzerAPIHandler,
 	security config.SecurityConfig,
 	logger *logger.Logger,
 ) *Router {
 	return &Router{
-		mux:                  http.NewServeMux(),
-		dashboardHandler:     dashboardHandler,
-		websocketHandler:     websocketHandler,
-		metricsAPIHandler:    metricsAPIHandler,
-		screenshotAPIHandler: screenshotAPIHandler,
-		authAPIHandler:       authAPIHandler,
-		security:             security,
-		logger:               logger,
+		mux:                       http.NewServeMux(),
+		dashboardHandler:          dashboardHandler,
+		websocketHandler:          websocketHandler,
+		metricsAPIHandler:         metricsAPIHandler,
+		screenshotAPIHandler:      screenshotAPIHandler,
+		authAPIHandler:            authAPIHandler,
+		releaseAnalyzerAPIHandler: releaseAnalyzerAPIHandler,
+		security:                  security,
+		logger:                    logger,
 	}
 }
 
@@ -81,7 +84,9 @@ func (rt *Router) Setup() http.Handler {
 
 	rt.mux.Handle("/api/v1/metrics/history", authMiddleware(http.HandlerFunc(rt.metricsAPIHandler.GetHistoricalMetrics)))
 	rt.mux.Handle("/api/metrics/history", authMiddleware(http.HandlerFunc(rt.metricsAPIHandler.GetHistoricalMetrics)))
-	rt.mux.Handle("/api/v1/screenshots/dashboard", authMiddleware(http.HandlerFunc(rt.screenshotAPIHandler.SaveDashboardScreenshots)))
+	rt.mux.Handle("/api/v1/screenshots/dashboard", authMiddleware(http.HandlerFunc(rt.screenshotAPIHandler.HandleDashboardScreenshots)))
+	rt.mux.Handle("/api/v1/release-analyzer/summary", authMiddleware(http.HandlerFunc(rt.releaseAnalyzerAPIHandler.GetSummary)))
+	rt.mux.Handle("/api/v1/release-analyzer/run", authMiddleware(http.HandlerFunc(rt.releaseAnalyzerAPIHandler.RunNow)))
 
 	// Применяем middleware
 	var handler http.Handler = rt.mux

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ import (
 
 type ScreenshotAPIHandler struct {
 	saveDashboardScreenshotsUC *usecase.SaveDashboardScreenshotsUseCase
+	listDashboardScreenshotsUC *usecase.ListDashboardScreenshotsUseCase
 	authConfig                 middleware.AuthConfig
 	logger                     *logger.Logger
 	maxPayloadBytes            int64
@@ -48,8 +50,22 @@ type screenshotResponseItem struct {
 	URL   string `json:"url"`
 }
 
+type screenshotListResponse struct {
+	Items      []screenshotListResponseItem `json:"items"`
+	NextCursor string                       `json:"next_cursor,omitempty"`
+}
+
+type screenshotListResponseItem struct {
+	Type         string    `json:"type"`
+	S3Key        string    `json:"s3_key"`
+	URL          string    `json:"url"`
+	CapturedAt   time.Time `json:"captured_at"`
+	LastModified time.Time `json:"last_modified"`
+}
+
 func NewScreenshotAPIHandler(
 	saveDashboardScreenshotsUC *usecase.SaveDashboardScreenshotsUseCase,
+	listDashboardScreenshotsUC *usecase.ListDashboardScreenshotsUseCase,
 	authConfig middleware.AuthConfig,
 	maxPayloadBytes int64,
 	maxArtifactBytes int,
@@ -68,11 +84,23 @@ func NewScreenshotAPIHandler(
 
 	return &ScreenshotAPIHandler{
 		saveDashboardScreenshotsUC: saveDashboardScreenshotsUC,
+		listDashboardScreenshotsUC: listDashboardScreenshotsUC,
 		authConfig:                 authConfig,
 		logger:                     log,
 		maxPayloadBytes:            maxPayloadBytes,
 		maxArtifactBytes:           maxArtifactBytes,
 		rateLimiter:                newFixedWindowRateLimiter(rateLimitPerMinute, time.Minute),
+	}
+}
+
+func (h *ScreenshotAPIHandler) HandleDashboardScreenshots(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.SaveDashboardScreenshots(w, r)
+	case http.MethodGet:
+		h.ListDashboardScreenshots(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -167,6 +195,87 @@ func (h *ScreenshotAPIHandler) SaveDashboardScreenshots(w http.ResponseWriter, r
 	}
 }
 
+func (h *ScreenshotAPIHandler) ListDashboardScreenshots(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := middleware.ValidateRequestAuth(r, h.authConfig); err != nil {
+		w.Header().Set("WWW-Authenticate", `Bearer realm="monitoring-dashboard"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	dashboardID := strings.TrimSpace(r.URL.Query().Get("dashboard_id"))
+	if dashboardID == "" {
+		dashboardID = "main"
+	}
+	limit := parsePositiveInt(r.URL.Query().Get("limit"), 24)
+	cursor := strings.TrimSpace(r.URL.Query().Get("cursor"))
+	artifactType := strings.TrimSpace(r.URL.Query().Get("artifact_type"))
+
+	from, err := parseOptionalRFC3339(r.URL.Query().Get("from"))
+	if err != nil {
+		http.Error(w, "Invalid from parameter: use RFC3339 format", http.StatusBadRequest)
+		return
+	}
+	to, err := parseOptionalRFC3339(r.URL.Query().Get("to"))
+	if err != nil {
+		http.Error(w, "Invalid to parameter: use RFC3339 format", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.listDashboardScreenshotsUC.Execute(r.Context(), usecase.ListDashboardScreenshotsCommand{
+		DashboardID:  dashboardID,
+		Limit:        limit,
+		Cursor:       cursor,
+		ArtifactType: artifactType,
+		From:         from,
+		To:           to,
+	})
+	if err != nil {
+		h.logger.Error("Failed to list dashboard screenshots", err,
+			"dashboard_id", dashboardID,
+			"limit", limit,
+			"artifact_type", artifactType,
+		)
+
+		statusCode := http.StatusBadRequest
+		if strings.Contains(err.Error(), "not configured") {
+			statusCode = http.StatusServiceUnavailable
+		}
+		if strings.Contains(err.Error(), "failed to list screenshots") {
+			statusCode = http.StatusInternalServerError
+		}
+		if strings.Contains(err.Error(), "metadata index") {
+			statusCode = http.StatusServiceUnavailable
+		}
+		http.Error(w, err.Error(), statusCode)
+		return
+	}
+
+	items := make([]screenshotListResponseItem, 0, len(result.Items))
+	for _, item := range result.Items {
+		items = append(items, screenshotListResponseItem{
+			Type:         item.Type,
+			S3Key:        item.S3Key,
+			URL:          item.URL,
+			CapturedAt:   item.CapturedAt,
+			LastModified: item.LastModified,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(screenshotListResponse{
+		Items:      items,
+		NextCursor: result.NextCursor,
+	}); err != nil {
+		h.logger.Error("Failed to encode screenshot list response", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
 func decodeBase64Image(raw string) ([]byte, error) {
 	value := strings.TrimSpace(raw)
 	if value == "" {
@@ -185,6 +294,32 @@ func decodeBase64Image(raw string) ([]byte, error) {
 	}
 
 	return decoded, nil
+}
+
+func parsePositiveInt(raw string, fallback int) int {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		return fallback
+	}
+
+	return parsed
+}
+
+func parseOptionalRFC3339(raw string) (time.Time, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return time.Time{}, nil
+	}
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return parsed.UTC(), nil
 }
 
 func extractClientIP(r *http.Request) string {

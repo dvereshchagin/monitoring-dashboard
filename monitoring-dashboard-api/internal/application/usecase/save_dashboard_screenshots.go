@@ -48,24 +48,29 @@ type SaveDashboardScreenshotsResult struct {
 }
 
 type SaveDashboardScreenshotsConfig struct {
-	KeyPrefix string
+	KeyPrefix           string
+	MetadataTTLDays     int
+	MetadataWriteStrict bool
 }
 
 type SaveDashboardScreenshotsUseCase struct {
-	storage port.ScreenshotStorage
-	config  SaveDashboardScreenshotsConfig
-	logger  *logger.Logger
+	storage            port.ScreenshotStorage
+	metadataRepository port.ScreenshotMetadataRepository
+	config             SaveDashboardScreenshotsConfig
+	logger             *logger.Logger
 }
 
 func NewSaveDashboardScreenshotsUseCase(
 	storage port.ScreenshotStorage,
+	metadataRepository port.ScreenshotMetadataRepository,
 	config SaveDashboardScreenshotsConfig,
 	log *logger.Logger,
 ) *SaveDashboardScreenshotsUseCase {
 	return &SaveDashboardScreenshotsUseCase{
-		storage: storage,
-		config:  config,
-		logger:  log,
+		storage:            storage,
+		metadataRepository: metadataRepository,
+		config:             config,
+		logger:             log,
 	}
 }
 
@@ -142,8 +147,43 @@ func (uc *SaveDashboardScreenshotsUseCase) Execute(
 		return items[i].Type < items[j].Type
 	})
 
+	savedAt := time.Now().UTC()
+	if uc.metadataRepository != nil {
+		records := make([]port.ScreenshotMetadata, 0, len(items))
+		for _, item := range items {
+			artifact := artifactsByType[item.Type]
+			record := port.ScreenshotMetadata{
+				DashboardID:  dashboardID,
+				ArtifactType: item.Type,
+				S3Key:        item.S3Key,
+				URL:          item.URL,
+				ContentType:  artifact.ContentType,
+				SizeBytes:    int64(len(artifact.Data)),
+				CapturedAt:   capturedAt,
+				LastModified: savedAt,
+			}
+
+			if uc.config.MetadataTTLDays > 0 {
+				record.ExpiresAt = savedAt.Add(time.Duration(uc.config.MetadataTTLDays) * 24 * time.Hour)
+			}
+
+			records = append(records, record)
+		}
+
+		if err := uc.metadataRepository.PutBatch(ctx, records); err != nil {
+			if uc.config.MetadataWriteStrict {
+				return nil, fmt.Errorf("failed to save screenshot metadata: %w", err)
+			}
+			uc.logger.Warn("Failed to save screenshot metadata, request completed in fail-open mode",
+				"dashboard_id", dashboardID,
+				"captured_at", capturedAt.Format(time.RFC3339),
+				"error", err.Error(),
+			)
+		}
+	}
+
 	return &SaveDashboardScreenshotsResult{
-		SavedAt: time.Now().UTC(),
+		SavedAt: savedAt,
 		Items:   items,
 	}, nil
 }

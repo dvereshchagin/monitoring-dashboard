@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dreschagin/monitoring-dashboard/internal/application/port"
 	"github.com/dreschagin/monitoring-dashboard/pkg/logger"
 )
 
@@ -29,9 +30,40 @@ func (m *mockScreenshotStorage) PutObject(_ context.Context, key, contentType st
 	return "https://example.com/" + key, nil
 }
 
+func (m *mockScreenshotStorage) ListObjects(_ context.Context, _ string, _ int) ([]port.ScreenshotObject, error) {
+	return nil, nil
+}
+
+func (m *mockScreenshotStorage) GetObjectURL(_ context.Context, key string) (string, error) {
+	return "https://example.com/" + key, nil
+}
+
+type mockScreenshotMetadataRepository struct {
+	records []port.ScreenshotMetadata
+	err     error
+}
+
+func (m *mockScreenshotMetadataRepository) PutBatch(_ context.Context, records []port.ScreenshotMetadata) error {
+	if m.err != nil {
+		return m.err
+	}
+	m.records = append(m.records, records...)
+	return nil
+}
+
+func (m *mockScreenshotMetadataRepository) ListByDashboard(_ context.Context, _ port.ScreenshotListQuery) (port.ScreenshotListPage, error) {
+	return port.ScreenshotListPage{}, nil
+}
+
 func TestSaveDashboardScreenshotsUseCase_Success(t *testing.T) {
 	storage := &mockScreenshotStorage{}
-	uc := NewSaveDashboardScreenshotsUseCase(storage, SaveDashboardScreenshotsConfig{KeyPrefix: "dashboards"}, logger.New("error"))
+	metadataRepo := &mockScreenshotMetadataRepository{}
+	uc := NewSaveDashboardScreenshotsUseCase(
+		storage,
+		metadataRepo,
+		SaveDashboardScreenshotsConfig{KeyPrefix: "dashboards"},
+		logger.New("error"),
+	)
 
 	capturedAt := time.Date(2026, 2, 7, 12, 34, 56, 0, time.UTC)
 	res, err := uc.Execute(context.Background(), SaveDashboardScreenshotsCommand{
@@ -48,6 +80,9 @@ func TestSaveDashboardScreenshotsUseCase_Success(t *testing.T) {
 	}
 	if len(storage.calls) != len(requiredArtifactTypes) {
 		t.Fatalf("expected %d uploads, got %d", len(requiredArtifactTypes), len(storage.calls))
+	}
+	if len(metadataRepo.records) != len(requiredArtifactTypes) {
+		t.Fatalf("expected %d metadata records, got %d", len(requiredArtifactTypes), len(metadataRepo.records))
 	}
 
 	expectedPrefix := "dashboards/main/2026/02/07/20260207T123456Z_"
@@ -66,7 +101,12 @@ func TestSaveDashboardScreenshotsUseCase_Success(t *testing.T) {
 
 func TestSaveDashboardScreenshotsUseCase_ValidationErrors(t *testing.T) {
 	storage := &mockScreenshotStorage{}
-	uc := NewSaveDashboardScreenshotsUseCase(storage, SaveDashboardScreenshotsConfig{KeyPrefix: "dashboards"}, logger.New("error"))
+	uc := NewSaveDashboardScreenshotsUseCase(
+		storage,
+		nil,
+		SaveDashboardScreenshotsConfig{KeyPrefix: "dashboards"},
+		logger.New("error"),
+	)
 
 	tests := []struct {
 		name    string
@@ -124,7 +164,12 @@ func TestSaveDashboardScreenshotsUseCase_StorageUploadError(t *testing.T) {
 	failKey := "dashboards/main/2026/02/07/20260207T123456Z_cpu_card.png"
 
 	storage := &mockScreenshotStorage{errAt: map[string]error{failKey: errors.New("boom")}}
-	uc := NewSaveDashboardScreenshotsUseCase(storage, SaveDashboardScreenshotsConfig{KeyPrefix: "dashboards"}, logger.New("error"))
+	uc := NewSaveDashboardScreenshotsUseCase(
+		storage,
+		nil,
+		SaveDashboardScreenshotsConfig{KeyPrefix: "dashboards"},
+		logger.New("error"),
+	)
 
 	_, err := uc.Execute(context.Background(), SaveDashboardScreenshotsCommand{
 		DashboardID: "main",
@@ -136,6 +181,52 @@ func TestSaveDashboardScreenshotsUseCase_StorageUploadError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "failed to upload cpu_card") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSaveDashboardScreenshotsUseCase_MetadataFailOpen(t *testing.T) {
+	storage := &mockScreenshotStorage{}
+	metadataRepo := &mockScreenshotMetadataRepository{err: errors.New("metadata unavailable")}
+	uc := NewSaveDashboardScreenshotsUseCase(
+		storage,
+		metadataRepo,
+		SaveDashboardScreenshotsConfig{
+			KeyPrefix:           "dashboards",
+			MetadataWriteStrict: false,
+		},
+		logger.New("error"),
+	)
+
+	_, err := uc.Execute(context.Background(), SaveDashboardScreenshotsCommand{
+		DashboardID: "main",
+		CapturedAt:  time.Now().UTC(),
+		Artifacts:   buildFullArtifacts(),
+	})
+	if err != nil {
+		t.Fatalf("expected fail-open behavior, got error: %v", err)
+	}
+}
+
+func TestSaveDashboardScreenshotsUseCase_MetadataStrict(t *testing.T) {
+	storage := &mockScreenshotStorage{}
+	metadataRepo := &mockScreenshotMetadataRepository{err: errors.New("metadata unavailable")}
+	uc := NewSaveDashboardScreenshotsUseCase(
+		storage,
+		metadataRepo,
+		SaveDashboardScreenshotsConfig{
+			KeyPrefix:           "dashboards",
+			MetadataWriteStrict: true,
+		},
+		logger.New("error"),
+	)
+
+	_, err := uc.Execute(context.Background(), SaveDashboardScreenshotsCommand{
+		DashboardID: "main",
+		CapturedAt:  time.Now().UTC(),
+		Artifacts:   buildFullArtifacts(),
+	})
+	if err == nil || !strings.Contains(err.Error(), "failed to save screenshot metadata") {
+		t.Fatalf("expected strict metadata error, got %v", err)
 	}
 }
 
