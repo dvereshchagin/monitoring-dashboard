@@ -7,7 +7,7 @@ spec:
   generators:
     - pullRequest:
         github:
-          owner: davereschagin
+          owner: dvereshchagin
           repo: monitoring-dashboard
           tokenRef:
             secretName: github-token
@@ -22,7 +22,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/davereschagin/monitoring-dashboard.git
+        repoURL: https://github.com/dvereshchagin/monitoring-dashboard.git
         targetRevision: '{{head_sha}}'
         path: infra/helm/monitoring-dashboard
         helm:

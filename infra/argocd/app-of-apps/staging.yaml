@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/davereschagin/monitoring-dashboard.git
+    repoURL: https://github.com/dvereshchagin/monitoring-dashboard.git
     targetRevision: main
     path: infra/argocd/applications/staging
   destination:

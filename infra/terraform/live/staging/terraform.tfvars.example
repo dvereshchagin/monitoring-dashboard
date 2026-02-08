@@ -6,25 +6,44 @@ vpc_cidr            = "10.20.0.0/16"
 availability_zones  = ["eu-north-1a", "eu-north-1b"]
 public_subnet_cidrs = ["10.20.1.0/24", "10.20.2.0/24"]
 private_subnet_cidrs = ["10.20.11.0/24", "10.20.12.0/24"]
+nat_gateway_mode = "one_per_az"
 
 cluster_version      = "1.30"
-node_instance_types  = ["t3.medium"]
-node_desired_size    = 2
-node_min_size        = 2
-node_max_size        = 4
+node_instance_types  = ["t3.small"]
+node_desired_size    = 4
+node_min_size        = 4
+node_max_size        = 8
+enable_cluster_autoscaler = true
 
 db_name                     = "monitoring"
 db_username                 = "monitoring_app"
 db_password                 = "CHANGE_ME"
-db_instance_class           = "db.t4g.medium"
-db_allocated_storage        = 50
-db_max_allocated_storage    = 200
+db_instance_class           = "db.t3.micro"
+db_allocated_storage        = 20
+db_max_allocated_storage    = 20
 db_multi_az                 = true
-db_backup_retention_days    = 7
+db_backup_retention_days    = 1
 db_deletion_protection      = true
+db_apply_immediately        = true
 
 ecr_repository_name = "monitoring-dashboard-api"
+s3_screenshots_bucket_name = ""
+s3_replication_enabled = true
+s3_replication_region = "eu-central-1"
+s3_replica_bucket_name = ""
+
+route53_enabled = true
+route53_delegated_zones = ["staging.xyibank.ru", "preview.xyibank.ru"]
+external_dns_enabled = true
 
 tags = {
   Owner = "platform-team"
 }
+
+# ArgoCD GitOps
+argocd_enabled          = true
+argocd_repo_url         = "https://github.com/YOUR_ORG/monitoring-dashboard.git"
+argocd_repo_username    = "git"
+argocd_repo_password    = "ghp_YOUR_GITHUB_PAT_TOKEN"
+argocd_ingress_host     = "argocd-staging.xyibank.ru"
+argocd_chart_version    = "7.7.12"

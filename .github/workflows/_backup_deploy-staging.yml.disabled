@@ -1,0 +1,129 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  EKS_CLUSTER_NAME: ${{ vars.STAGING_EKS_CLUSTER_NAME }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  STAGING_HOST: ${{ vars.STAGING_HOST }}
+
+jobs:
+  test-build-deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: monitoring-dashboard-api/go.mod
+
+      - name: Unit tests
+        working-directory: monitoring-dashboard-api
+        run: go test -v ./...
+
+      - name: Gateway unit tests
+        working-directory: monitoring-gateway
+        run: go test -v ./...
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.4
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE_REPO="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}"
+          ANALYZER_IMAGE_TAG="${IMAGE_TAG}-release-analyzer"
+          GATEWAY_IMAGE_TAG="${IMAGE_TAG}-gateway"
+
+          docker build -f monitoring-dashboard-api/Dockerfile -t "${IMAGE_REPO}:${IMAGE_TAG}" monitoring-dashboard-api
+          docker build -f monitoring-dashboard-api/Dockerfile.release-analyzer -t "${IMAGE_REPO}:${ANALYZER_IMAGE_TAG}" monitoring-dashboard-api
+          docker build -f monitoring-gateway/Dockerfile -t "${IMAGE_REPO}:${GATEWAY_IMAGE_TAG}" monitoring-gateway
+
+          docker push "${IMAGE_REPO}:${IMAGE_TAG}"
+          docker push "${IMAGE_REPO}:${ANALYZER_IMAGE_TAG}"
+          docker push "${IMAGE_REPO}:${GATEWAY_IMAGE_TAG}"
+
+          echo "IMAGE_REPO=${IMAGE_REPO}" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
+          echo "ANALYZER_IMAGE_TAG=${ANALYZER_IMAGE_TAG}" >> "$GITHUB_ENV"
+          echo "GATEWAY_IMAGE_TAG=${GATEWAY_IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      - name: Configure kubeconfig
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+
+      - name: Deploy staging release
+        run: |
+          NAMESPACE="monitoring-dashboard-staging"
+          RELEASE="monitoring-dashboard-staging"
+          kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+          helm upgrade --install "$RELEASE" ./infra/helm/monitoring-dashboard \
+            --namespace "$NAMESPACE" \
+            -f ./infra/helm/monitoring-dashboard/values.yaml \
+            -f ./infra/helm/monitoring-dashboard/values-staging.yaml \
+            --set image.repository="$IMAGE_REPO" \
+            --set image.tag="$IMAGE_TAG" \
+            --set releaseAnalyzer.image.repository="$IMAGE_REPO" \
+            --set releaseAnalyzer.image.tag="$ANALYZER_IMAGE_TAG" \
+            --set gateway.enabled="true" \
+            --set gateway.image.repository="$IMAGE_REPO" \
+            --set gateway.image.tag="$GATEWAY_IMAGE_TAG" \
+            --set ingress.hosts[0].host="$STAGING_HOST" \
+            --set config.ALLOWED_ORIGINS="https://$STAGING_HOST" \
+            --set externalSecrets.targetSecretName="monitoring-dashboard-staging-secrets" \
+            --set secretRef.name="monitoring-dashboard-staging-secrets" \
+            --wait --timeout 10m
+
+      - name: Verify staging secret has S3 credentials
+        run: |
+          NAMESPACE="monitoring-dashboard-staging"
+          SECRET_NAME="monitoring-dashboard-staging-secrets"
+
+          for i in $(seq 1 30); do
+            if kubectl -n "$NAMESPACE" get secret "$SECRET_NAME" >/dev/null 2>&1; then
+              break
+            fi
+            if [[ "$i" == "30" ]]; then
+              echo "error: timed out waiting for secret $SECRET_NAME"
+              exit 1
+            fi
+            sleep 5
+          done
+
+          S3_ACCESS_KEY_ID="$(kubectl -n "$NAMESPACE" get secret "$SECRET_NAME" -o jsonpath='{.data.S3_ACCESS_KEY_ID}' | base64 -d || true)"
+          S3_SECRET_ACCESS_KEY="$(kubectl -n "$NAMESPACE" get secret "$SECRET_NAME" -o jsonpath='{.data.S3_SECRET_ACCESS_KEY}' | base64 -d || true)"
+
+          if [[ -z "$S3_ACCESS_KEY_ID" || -z "$S3_SECRET_ACCESS_KEY" ]]; then
+            echo "error: $SECRET_NAME does not contain S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY"
+            echo "ensure AWS Secrets Manager key /monitoring-dashboard/staging/app has both properties"
+            exit 1
+          fi
