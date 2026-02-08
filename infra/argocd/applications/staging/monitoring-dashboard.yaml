@@ -19,21 +19,6 @@ spec:
       valueFiles:
         - values.yaml
         - values-staging.yaml
-      parameters:
-        - name: image.repository
-          value: "729665432048.dkr.ecr.eu-north-1.amazonaws.com/monitoring-dashboard-api"
-        - name: image.tag
-          value: "staging-20260208122716"
-        - name: releaseAnalyzer.image.repository
-          value: "729665432048.dkr.ecr.eu-north-1.amazonaws.com/monitoring-dashboard-api"
-        - name: releaseAnalyzer.image.tag
-          value: "staging-20260208122716-release-analyzer"
-        - name: gateway.image.repository
-          value: "729665432048.dkr.ecr.eu-north-1.amazonaws.com/monitoring-dashboard-api"
-        - name: gateway.image.tag
-          value: "staging-20260208124640-gateway"
-        - name: ingress.hosts[0].host
-          value: "staging.xyibank.ru"
 
   destination:
     server: https://kubernetes.default.svc
